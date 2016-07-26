@@ -21,7 +21,6 @@ import co.cask.cdap.api.security.store.SecureStoreData;
 import co.cask.cdap.api.security.store.SecureStoreManager;
 import co.cask.cdap.api.security.store.SecureStoreMetadata;
 
-import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
@@ -34,23 +33,23 @@ public class DummyKMSStore implements SecureStore, SecureStoreManager {
   private static final String UNSUPPORTED_ERROR_MSG = "Installed version of Hadoop does not support KMS.";
 
   @Override
-  public List<SecureStoreMetadata> listSecureData(String namespace) throws IOException {
+  public List<SecureStoreMetadata> listSecureData(String namespace) throws Exception {
     throw new UnsupportedOperationException(UNSUPPORTED_ERROR_MSG);
   }
 
   @Override
-  public SecureStoreData getSecureData(String namespace, String name) throws IOException {
+  public SecureStoreData getSecureData(String namespace, String name) throws Exception {
     throw new UnsupportedOperationException(UNSUPPORTED_ERROR_MSG);
   }
 
   @Override
   public void putSecureData(String namespace, String name, byte[] data, String description,
-                            Map<String, String> properties) throws IOException {
+                            Map<String, String> properties) throws Exception {
     throw new UnsupportedOperationException(UNSUPPORTED_ERROR_MSG);
   }
 
   @Override
-  public void deleteSecureData(String namespace, String name) throws IOException {
+  public void deleteSecureData(String namespace, String name) throws Exception {
     throw new UnsupportedOperationException(UNSUPPORTED_ERROR_MSG);
   }
 }
