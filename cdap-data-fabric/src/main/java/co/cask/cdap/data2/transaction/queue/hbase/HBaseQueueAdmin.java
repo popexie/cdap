@@ -159,7 +159,7 @@ public class HBaseQueueAdmin extends AbstractQueueAdmin {
     createStateStoreDataset(queueName.getFirstComponent());
 
     TableId tableId = getDataTableId(queueName);
-    try (DatasetAdmin dsAdmin = new DatasetAdmin(tableId, hConf, tableUtil, properties)) {
+    try (DatasetAdmin dsAdmin = new DatasetAdmin(tableId, hConf, cConf, tableUtil, properties)) {
       dsAdmin.create();
     }
   }
@@ -399,7 +399,7 @@ public class HBaseQueueAdmin extends AbstractQueueAdmin {
   }
 
   private void upgrade(TableId tableId, Properties properties) throws Exception {
-    try (AbstractHBaseDataSetAdmin dsAdmin = new DatasetAdmin(tableId, hConf, tableUtil, properties)) {
+    try (AbstractHBaseDataSetAdmin dsAdmin = new DatasetAdmin(tableId, hConf, cConf, tableUtil, properties)) {
       dsAdmin.upgrade();
     }
   }
@@ -435,8 +435,9 @@ public class HBaseQueueAdmin extends AbstractQueueAdmin {
   private final class DatasetAdmin extends AbstractHBaseDataSetAdmin {
     private final Properties properties;
 
-    private DatasetAdmin(TableId tableId, Configuration hConf, HBaseTableUtil tableUtil, Properties properties) {
-      super(tableId, hConf, tableUtil);
+    private DatasetAdmin(TableId tableId, Configuration hConf, CConfiguration cConf,
+                         HBaseTableUtil tableUtil, Properties properties) {
+      super(tableId, hConf, cConf, tableUtil);
       this.properties = properties;
     }
 
