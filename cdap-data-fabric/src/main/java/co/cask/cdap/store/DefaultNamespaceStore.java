@@ -36,6 +36,9 @@ import co.cask.tephra.TransactionSystemClient;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 
@@ -55,6 +58,7 @@ public class DefaultNamespaceStore implements NamespaceStore {
   private final Supplier<TransactionExecutor> appsTx;
   private final DatasetFramework dsFramework;
   private final MultiThreadDatasetCache dsCache;
+  private final LoadingCache<NamespaceId, NamespaceMeta> namespaceMetaCache;
 
   @Inject
   DefaultNamespaceStore(
@@ -90,6 +94,13 @@ public class DefaultNamespaceStore implements NamespaceStore {
         return txExecutorFactory.createExecutor(ImmutableList.of((TransactionAware) apps.get()));
       }
     };
+    this.namespaceMetaCache = CacheBuilder.newBuilder().build(new CacheLoader<NamespaceId, NamespaceMeta>() {
+      @SuppressWarnings("NullableProblems")
+      @Override
+      public NamespaceMeta load(NamespaceId namespaceId) throws Exception {
+        return fetchNamespaceMeta(namespaceId);
+      }
+    });
   }
 
   @Override
@@ -124,25 +135,22 @@ public class DefaultNamespaceStore implements NamespaceStore {
           }
         }
       }, apps.get());
+    // refresh the namespacemeta in the cache
+    namespaceMetaCache.refresh(metadata.getNamespaceId());
   }
 
   @Override
   @Nullable
   public NamespaceMeta get(final Id.Namespace id) {
-    Preconditions.checkArgument(id != null, "Namespace id cannot be null.");
-    return appsTx.get().executeUnchecked(
-      new TransactionExecutor.Function<NamespaceMDS, NamespaceMeta>() {
-        @Override
-        public NamespaceMeta apply(NamespaceMDS mds) throws Exception {
-          return mds.get(id);
-        }
-      }, apps.get());
+    return namespaceMetaCache.getUnchecked(id.toEntityId());
   }
 
   @Override
   @Nullable
   public NamespaceMeta delete(final Id.Namespace id) {
     Preconditions.checkArgument(id != null, "Namespace id cannot be null.");
+    // remove the namespacemeta from the cache
+    namespaceMetaCache.invalidate(id);
     return appsTx.get().executeUnchecked(
       new TransactionExecutor.Function<NamespaceMDS, NamespaceMeta>() {
         @Override
@@ -167,4 +175,14 @@ public class DefaultNamespaceStore implements NamespaceStore {
       }, apps.get());
   }
 
+  private NamespaceMeta fetchNamespaceMeta(final NamespaceId namespaceId) {
+    Preconditions.checkArgument(namespaceId != null, "Namespace id cannot be null.");
+    return appsTx.get().executeUnchecked(
+      new TransactionExecutor.Function<NamespaceMDS, NamespaceMeta>() {
+        @Override
+        public NamespaceMeta apply(NamespaceMDS mds) throws Exception {
+          return mds.get(namespaceId.toId());
+        }
+      }, apps.get());
+  }
 }
