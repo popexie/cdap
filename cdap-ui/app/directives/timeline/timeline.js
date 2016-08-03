@@ -29,6 +29,7 @@ function link (scope, element) {
       startTime,
       endTime,
       pinOffset,
+      handleWidth,
       firstRun = true;
 
   //Components
@@ -63,11 +64,11 @@ function link (scope, element) {
     height = 50;
     paddingLeft = 15;
     paddingRight = 15;
-    // maxRange = width - paddingLeft - paddingRight;
-    maxRange = width - paddingRight + 8;
+    handleWidth = 8;
+    // maxRange = width - width of handle - width of needle;
+    maxRange = width - 12;
     sliderLimit = maxRange;
     pinOffset = 13;
-    // sliderLimit = maxRange + 24;
     pinX = 0;
     sliderX = 0;
     timelineStack = {};
@@ -129,9 +130,11 @@ function link (scope, element) {
   // -------------------------Build Brush / Sliders------------------------- //
   function renderBrushAndSlider(){
 
+    let pinScrollXPosition = xScale(scope.pinScrollingPosition);
+
     timescaleSvg.append('g')
       .attr('class', 'xaxis-bottom')
-      .attr('transform', 'translate(' + ( (paddingLeft + paddingRight) / 2) + ',' + (height - 20) + ')')
+      .attr('transform', 'translate(' + handleWidth + ', ' + (height - 20) + ')')
       .call(xAxis);
 
     //attach handler to brush
@@ -148,9 +151,10 @@ function link (scope, element) {
             }
             sliderHandle.attr('x', val);
             sliderBar.attr('d', 'M0,0V0H' + val + 'V0');
-            pinHandle.attr('x', scope.pinScrollingPosition-pinOffset+1);
-            scrollNeedle.attr('x1', scope.pinScrollingPosition + 8)
-                       .attr('x2', scope.pinScrollingPosition + 8);
+            if(val > pinScrollXPosition){
+              scope.pinScrollingPosition = xScale.invert(val);
+              scope.updatePinScale();
+            }
           }
         })
         .on('brushend', function() {
@@ -163,9 +167,11 @@ function link (scope, element) {
               val = maxRange;
             }
             updateSlider(val);
-            pinHandle.attr('x', scope.pinScrollingPosition-pinOffset+1);
-            scrollNeedle.attr('x1', scope.pinScrollingPosition + 8)
-                        .attr('x2', scope.pinScrollingPosition + 8);
+
+            if(val > pinScrollXPosition){
+              scope.pinScrollingPosition = xScale.invert(val);
+              scope.updatePinScale();
+            }
           }
        });
 
@@ -197,7 +203,7 @@ function link (scope, element) {
     sliderBar.attr('d', 'M0,0V0H' + xValue + 'V0');
 
     sliderHandle = slide.append('svg:image')
-      .attr('width', 8)
+      .attr('width', handleWidth)
       .attr('height', 52)
       .attr('xlink:href', '/assets/img/sliderHandle.svg')
       .attr('x', xValue-1)
@@ -247,16 +253,11 @@ function link (scope, element) {
       .attr('stroke', 'grey');
   }
 
-  scope.updatePinScale = function (val) {
-    console.log('testing val', val);
+  scope.updatePinScale = function () {
     let xPositionVal = Math.floor(xScale(scope.pinScrollingPosition));
-    //let xPositionVal = xScale(Math.floor(scope.pinScrollingPosition)); //xScale(Math.floor(val));
     if(xPositionVal < 0 || xPositionVal > maxRange){
       return;
     }
-
-    console.log('Updating pin to: ', xPositionVal);
-
     if(pinHandle !== undefined){
      pinHandle.attr('x', xPositionVal - pinOffset + 1);
      scrollNeedle.attr('x1', xPositionVal + 8)

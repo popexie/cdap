@@ -89,16 +89,14 @@ function LogViewerController ($scope, LogViewerStore, myLogsApi, LOGVIEWERSTORE_
     if(index === 0 && isInview){
       viewMap = {};
       viewMap[index] = isInview;
-      console.log('Top of the table is row 0!');
       newTime = this.displayData[index].log.timestamp;
       this.updateScrollPositionInStore(newTime);
     }
     else {
-      //This is the top
+      //This is the top of the table
       if(isInview && (viewMap[index-1] === false || viewMap[index-1] === undefined)){
         viewMap = {};
         newTime = this.displayData[index].log.timestamp;
-        console.log('The new top of the table is: ', index, '! with time: ', newTime);
         this.updateScrollPositionInStore(newTime);
       }
       viewMap[index] = isInview;
@@ -395,6 +393,12 @@ function LogViewerController ($scope, LogViewerStore, myLogsApi, LOGVIEWERSTORE_
         this.fromOffset = res[res.length-1].offset;
         this.data = res;
         this.renderData();
+
+        //Update the scroll needle to be positioned at the first element in the rendered data
+        if(this.displayData.length > 0){
+          this.updateScrollPositionInStore(this.displayData[0].log.timestamp);
+        }
+
         this.cacheSize = res.length - this.cacheDecrement;
 
         if(res.length < this.viewLimit){
