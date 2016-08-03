@@ -116,7 +116,7 @@
         <tr ng-class="{'has-stack-trace' : entry.log.stackTrace.length > 0, 'row-selected' : $index+1  < LogViewer.displayData.length && LogViewer.displayData[$index + 1].stackTrace }"
             ng-repeat="entry in LogViewer.displayData | filter:LogViewer.filterByStartDate | limitTo: LogViewer.viewLimit track by $index"
             ng-click="LogViewer.showStackTrace($index)"
-            in-view="LogViewer.testInview($index, $inview)"
+            in-view="LogViewer.inViewScrollUpdate($index, $inview)"
             in-view-options="{ debounce : 500}">
 
           <td class="time time-stack-trace"

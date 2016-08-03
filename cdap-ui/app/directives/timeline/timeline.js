@@ -139,6 +139,13 @@ function link (scope, element) {
       .attr('transform', 'translate(' + handleWidth + ', ' + (height - 20) + ')')
       .call(xAxis);
 
+    function updateScrollWithNewStart(startValue, currentPosition){
+      if(startValue > currentPosition){
+        scope.pinScrollingPosition = xScale.invert(startValue);
+        scope.updatePin();
+      }
+    }
+
     //attach handler to brush
     sliderBrush = d3.svg.brush()
         .x(xScale)
@@ -153,10 +160,7 @@ function link (scope, element) {
             }
             sliderHandle.attr('x', val);
             sliderBar.attr('d', 'M0,0V0H' + val + 'V0');
-            if(val > pinScrollXPosition){
-              scope.pinScrollingPosition = xScale.invert(val);
-              scope.updatePinScale();
-            }
+            updateScrollWithNewStart(val, pinScrollXPosition);
           }
         })
         .on('brushend', function() {
@@ -169,11 +173,7 @@ function link (scope, element) {
               val = maxRange;
             }
             updateSlider(val);
-
-            if(val > pinScrollXPosition){
-              scope.pinScrollingPosition = xScale.invert(val);
-              scope.updatePinScale();
-            }
+            updateScrollWithNewStart(val, pinScrollXPosition);
           }
        });
 
@@ -250,19 +250,19 @@ function link (scope, element) {
           .attr('class', 'tooltip')
           .style('opacity', 0);
 
+        //Reposition tooltip if overflows on the side of the page ; tooltip width is 250
+        let overflowOffset = xScale(scope.pinScrollingPosition) + 250 > maxRange ? 250 : 0;
+
         tooltipDiv.transition()
                     .duration(200)
                     .style('opacity', 0.9)
                     .attr('class', 'timeline-tooltip');
         tooltipDiv.html(scope.pinScrollingPosition)
-                  .style('left', (d3.event.pageX) + 'px')
+                  .style('left', (d3.event.pageX - overflowOffset) + 'px')
                   .style('top', (d3.event.pageY - 28) + 'px');
       })
       .on('mouseout', function() {
         d3.selectAll('.timeline-tooltip').remove();
-        tooltipDiv.transition()
-                  .duration(100000)
-                  .style('opacity', 0);
       });
 
     scrollNeedle = slide.append('line')
@@ -274,7 +274,7 @@ function link (scope, element) {
       .attr('stroke', 'grey');
   }
 
-  scope.updatePinScale = function () {
+  scope.updatePin = function () {
     let xPositionVal = Math.floor(xScale(scope.pinScrollingPosition));
     if(xPositionVal < 0 || xPositionVal > maxRange){
       return;

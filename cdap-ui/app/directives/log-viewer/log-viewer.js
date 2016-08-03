@@ -84,7 +84,8 @@ function LogViewerController ($scope, LogViewerStore, myLogsApi, LOGVIEWERSTORE_
 
   let viewMap = {};
   let newTime;
-  this.testInview = (index, isInview) => {
+
+  this.inViewScrollUpdate = (index, isInview) => {
     //Top of the table
     if(index === 0 && isInview){
       viewMap = {};
