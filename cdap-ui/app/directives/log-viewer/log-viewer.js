@@ -82,8 +82,36 @@ function LogViewerController ($scope, LogViewerStore, myLogsApi, LOGVIEWERSTORE_
   let numEvents = 0;
   this.toggleExpandAll = false;
 
+  let viewMap = {};
+  let newTime;
+  this.testInview = (index, isInview) => {
+    //Top of the table
+    if(index === 0 && isInview){
+      viewMap = {};
+      viewMap[index] = isInview;
+      console.log('Top of the table is row 0!');
+      newTime = this.displayData[index].log.timestamp;
+      this.updateScrollPositionInStore(newTime);
+    }
+    else {
+      //This is the top
+      if(isInview && (viewMap[index-1] === false || viewMap[index-1] === undefined)){
+        viewMap = {};
+        newTime = this.displayData[index].log.timestamp;
+        console.log('The new top of the table is: ', index, '! with time: ', newTime);
+        this.updateScrollPositionInStore(newTime);
+      }
+      viewMap[index] = isInview;
+    }
+  };
+
   var unsub = LogViewerStore.subscribe(() => {
     this.logStartTime = LogViewerStore.getState().startTime;
+
+    if(this.startTimeSec === Math.floor(this.logStartTime.getTime()/1000)){
+      return;
+    }
+
     if (typeof this.logStartTime !== 'object') {
       this.setDefault();
       return;

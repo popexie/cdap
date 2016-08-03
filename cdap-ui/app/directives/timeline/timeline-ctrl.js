@@ -18,6 +18,7 @@ function TimelineController ($scope, LogViewerStore, LOGVIEWERSTORE_ACTIONS, myL
 
   var dataSrc = new MyCDAPDataSource($scope);
   this.pinScrollPosition = 0;
+  $scope.pinScrollingPosition = 0;
 
   this.updateStartTimeInStore = function(val) {
     LogViewerStore.dispatch({
@@ -71,6 +72,9 @@ function TimelineController ($scope, LogViewerStore, LOGVIEWERSTORE_ACTIONS, myL
   LogViewerStore.subscribe(() => {
     this.pinScrollPosition = LogViewerStore.getState().scrollPosition;
     if($scope.updatePinScale !== undefined){
+      console.log('value updated in store!');
+      // console.log('Newly updated value is : ', this.pinScrollPosition);
+      $scope.pinScrollingPosition = this.pinScrollPosition;
       $scope.updatePinScale(this.pinScrollPosition);
     }
   });
