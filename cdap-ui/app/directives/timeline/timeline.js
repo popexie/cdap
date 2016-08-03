@@ -45,7 +45,8 @@ function link (scope, element) {
       scrollPinSvg,
       xAxis,
       sliderBar,
-      scrollNeedle;
+      scrollNeedle,
+      tooltipDiv;
 
   //Initialize charting
   scope.initialize = () => {
@@ -84,6 +85,7 @@ function link (scope, element) {
     scrollPinSvg = undefined;
     xAxis = undefined;
     sliderBar = undefined;
+    tooltipDiv = undefined;
     timelineData = scope.metadata;
 
     scope.plot();
@@ -242,7 +244,26 @@ function link (scope, element) {
       .attr('height', 60)
       .attr('xlink:href', '/assets/img/scrollPin.svg')
       .attr('x', thePinScrollPosition - pinOffset)
-      .attr('y', 0);
+      .attr('y', 0)
+      .on('mouseover', function() {
+        tooltipDiv = d3.select('body').append('div')
+          .attr('class', 'tooltip')
+          .style('opacity', 0);
+
+        tooltipDiv.transition()
+                    .duration(200)
+                    .style('opacity', 0.9)
+                    .attr('class', 'timeline-tooltip');
+        tooltipDiv.html(scope.pinScrollingPosition)
+                  .style('left', (d3.event.pageX) + 'px')
+                  .style('top', (d3.event.pageY - 28) + 'px');
+      })
+      .on('mouseout', function() {
+        d3.selectAll('.timeline-tooltip').remove();
+        tooltipDiv.transition()
+                  .duration(100000)
+                  .style('opacity', 0);
+      });
 
     scrollNeedle = slide.append('line')
       .attr('x1', thePinScrollPosition + pinOffset - 6)
