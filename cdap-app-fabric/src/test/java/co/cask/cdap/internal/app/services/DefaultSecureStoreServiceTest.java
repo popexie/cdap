@@ -81,7 +81,6 @@ public class DefaultSecureStoreServiceTest {
 
   @BeforeClass
   public static void setup() throws Exception {
-    CConfiguration cConf = createCConf();
     SConfiguration sConf = SConfiguration.create();
     sConf.set(Constants.Security.Store.FILE_PASSWORD, "secret");
     final Injector injector = Guice.createInjector(new AppFabricTestModule(createCConf(), sConf));
