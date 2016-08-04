@@ -388,6 +388,10 @@ function LogViewerController ($scope, LogViewerStore, myLogsApi, LOGVIEWERSTORE_
 
         if(res.length === 0){
           getStatus();
+          if(!this.applicationIsRunning){
+            this.loading = false;
+            this.displayData = [];
+          }
           return;
         }
 

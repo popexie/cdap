@@ -160,7 +160,7 @@
         <tr class="message-holder">
           <td colspan="4">
             <div class="well well-sm text-center"
-                 ng-if="!LogViewer.loading && !LogViewer.displayData.length">
+                 ng-if="!LogViewer.loading && LogViewer.displayData.length === 0">
               <h4>
                 No logs to show.
               </h4>
