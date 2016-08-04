@@ -18,6 +18,7 @@ package co.cask.cdap.internal.app.services;
 
 import co.cask.cdap.common.conf.CConfiguration;
 import co.cask.cdap.common.conf.Constants;
+import co.cask.cdap.common.conf.SConfiguration;
 import co.cask.cdap.internal.guice.AppFabricTestModule;
 import co.cask.cdap.internal.test.AppJarHelper;
 import co.cask.cdap.proto.id.EntityId;
@@ -69,7 +70,9 @@ public class DefaultSecureStoreServiceTest {
 
   @BeforeClass
   public static void setup() throws Exception {
-    Injector injector = Guice.createInjector(new AppFabricTestModule(createCConf()));
+    SConfiguration sConf = SConfiguration.create();
+    sConf.set(Constants.Security.Store.FILE_PASSWORD, "secret");
+    Injector injector = Guice.createInjector(new AppFabricTestModule(createCConf(), sConf));
     secureStoreService = injector.getInstance(SecureStoreService.class);
     authorizer = injector.getInstance(AuthorizerInstantiator.class).get();
   }
@@ -88,6 +91,9 @@ public class DefaultSecureStoreServiceTest {
     LocationFactory locationFactory = new LocalLocationFactory(rootLocationFactoryPath);
     Location authorizerJar = AppJarHelper.createDeploymentJar(locationFactory, InMemoryAuthorizer.class);
     cConf.set(Constants.Security.Authorization.EXTENSION_JAR_PATH, authorizerJar.toURI().getPath());
+
+    // set secure store provider
+    cConf.set(Constants.Security.Store.PROVIDER, "file");
     return cConf;
   }
 
