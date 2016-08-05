@@ -807,7 +807,7 @@ public class ProgramLifecycleService extends AbstractIdleService {
   private void ensureAccess(ProgramId programId) throws Exception {
     Principal principal = authenticationContext.getPrincipal();
     Predicate<EntityId> filter = authorizationEnforcer.createFilter(principal);
-    if (!Principal.SYSTEM.equals(principal) && !filter.apply(programId)) {
+    if (!filter.apply(programId)) {
       throw new UnauthorizedException(principal, Action.READ, programId);
     }
   }

@@ -65,6 +65,7 @@ import co.cask.cdap.metrics.guice.MetricsHandlerModule;
 import co.cask.cdap.metrics.query.MetricsQueryService;
 import co.cask.cdap.notifications.feeds.guice.NotificationFeedServiceRuntimeModule;
 import co.cask.cdap.notifications.guice.NotificationServiceRuntimeModule;
+import co.cask.cdap.security.authorization.AuthorizationBootstrapper;
 import co.cask.cdap.security.authorization.AuthorizationEnforcementModule;
 import co.cask.cdap.security.authorization.AuthorizationEnforcementService;
 import co.cask.cdap.security.authorization.AuthorizerInstantiator;
@@ -134,6 +135,7 @@ public class StandaloneMain {
   private final AuthorizerInstantiator authorizerInstantiator;
   private final RemoteSystemOperationsService remoteSystemOperationsService;
   private final AuthorizationEnforcementService authorizationEnforcementService;
+  private final AuthorizationBootstrapper authorizationBootstrapper;
 
   private ExternalAuthenticationServer externalAuthenticationServer;
   private ExploreExecutorService exploreExecutorService;
@@ -167,6 +169,7 @@ public class StandaloneMain {
       trackerAppCreationService = null;
     }
 
+    authorizationBootstrapper = injector.getInstance(AuthorizationBootstrapper.class);
     txService = injector.getInstance(InMemoryTransactionService.class);
     router = injector.getInstance(NettyRouter.class);
     metricsQueryService = injector.getInstance(MetricsQueryService.class);
@@ -252,6 +255,7 @@ public class StandaloneMain {
       kafkaClient.startAndWait();
     }
 
+    authorizationBootstrapper.startAndWait();
     txService.startAndWait();
     metricsCollectionService.startAndWait();
     authorizationEnforcementService.startAndWait();
@@ -347,6 +351,7 @@ public class StandaloneMain {
         zkClient.stopAndWait();
       }
 
+      authorizationBootstrapper.stopAndWait();
       authorizerInstantiator.close();
     } catch (Throwable e) {
       halt = true;

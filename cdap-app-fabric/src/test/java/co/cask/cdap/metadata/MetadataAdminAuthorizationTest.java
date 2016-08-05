@@ -19,21 +19,24 @@ package co.cask.cdap.metadata;
 import co.cask.cdap.AllProgramsApp;
 import co.cask.cdap.common.conf.CConfiguration;
 import co.cask.cdap.common.conf.Constants;
+import co.cask.cdap.common.namespace.NamespaceQueryAdmin;
+import co.cask.cdap.common.namespace.RemoteNamespaceQueryClient;
+import co.cask.cdap.common.utils.Tasks;
 import co.cask.cdap.gateway.handlers.meta.RemoteSystemOperationsService;
 import co.cask.cdap.internal.AppFabricTestHelper;
 import co.cask.cdap.internal.app.services.AppFabricServer;
 import co.cask.cdap.internal.test.AppJarHelper;
 import co.cask.cdap.proto.Id;
-import co.cask.cdap.proto.id.InstanceId;
 import co.cask.cdap.proto.id.NamespaceId;
 import co.cask.cdap.proto.metadata.MetadataSearchTargetType;
 import co.cask.cdap.proto.security.Action;
 import co.cask.cdap.proto.security.Principal;
-import co.cask.cdap.security.authorization.AuthorizationEnforcementService;
+import co.cask.cdap.security.auth.context.MasterAuthenticationContext;
 import co.cask.cdap.security.authorization.AuthorizerInstantiator;
 import co.cask.cdap.security.authorization.InMemoryAuthorizer;
 import co.cask.cdap.security.spi.authentication.SecurityRequestContext;
 import co.cask.cdap.security.spi.authorization.Authorizer;
+import com.google.inject.AbstractModule;
 import com.google.inject.Injector;
 import org.apache.twill.filesystem.LocalLocationFactory;
 import org.apache.twill.filesystem.Location;
@@ -49,6 +52,8 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.EnumSet;
+import java.util.concurrent.Callable;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Test authorization for metadata
@@ -62,23 +67,30 @@ public class MetadataAdminAuthorizationTest {
   private static CConfiguration cConf;
   private static MetadataAdmin metadataAdmin;
   private static Authorizer authorizer;
-  private static AuthorizationEnforcementService authorizationEnforcementService;
   private static AppFabricServer appFabricServer;
   private static RemoteSystemOperationsService remoteSystemOperationsService;
 
   @BeforeClass
   public static void setup() throws Exception {
     cConf = createCConf();
-    Injector injector = AppFabricTestHelper.getInjector(cConf);
+    final Injector injector = AppFabricTestHelper.getInjector(cConf, new AbstractModule() {
+      @Override
+      protected void configure() {
+        bind(NamespaceQueryAdmin.class).to(RemoteNamespaceQueryClient.class);
+      }
+    });
     metadataAdmin = injector.getInstance(MetadataAdmin.class);
     authorizer = injector.getInstance(AuthorizerInstantiator.class).get();
-    authorizer.grant(new InstanceId(cConf.get(Constants.INSTANCE_NAME)), ALICE, Collections.singleton(Action.ADMIN));
-    authorizationEnforcementService = injector.getInstance(AuthorizationEnforcementService.class);
-    authorizationEnforcementService.startAndWait();
     appFabricServer = injector.getInstance(AppFabricServer.class);
     appFabricServer.startAndWait();
     remoteSystemOperationsService = injector.getInstance(RemoteSystemOperationsService.class);
     remoteSystemOperationsService.startAndWait();
+    Tasks.waitFor(true, new Callable<Boolean>() {
+      @Override
+      public Boolean call() throws Exception {
+        return injector.getInstance(NamespaceQueryAdmin.class).exists(Id.Namespace.DEFAULT);
+      }
+    }, 5, TimeUnit.SECONDS);
   }
 
   @Test
@@ -97,7 +109,6 @@ public class MetadataAdminAuthorizationTest {
   public static void tearDown() {
     remoteSystemOperationsService.stopAndWait();
     appFabricServer.stopAndWait();
-    authorizationEnforcementService.stopAndWait();
   }
 
   private static CConfiguration createCConf() throws IOException {
@@ -110,7 +121,7 @@ public class MetadataAdminAuthorizationTest {
     LocationFactory locationFactory = new LocalLocationFactory(new File(TEMPORARY_FOLDER.newFolder().toURI()));
     Location authorizerJar = AppJarHelper.createDeploymentJar(locationFactory, InMemoryAuthorizer.class);
     cConf.set(Constants.Security.Authorization.EXTENSION_JAR_PATH, authorizerJar.toURI().getPath());
-    cConf.set(Constants.Security.Authorization.SUPERUSERS, "hulk");
+    cConf.set(Constants.Security.Authorization.SYSTEM_USER, new MasterAuthenticationContext().getPrincipal().getName());
     return cConf;
   }
 }

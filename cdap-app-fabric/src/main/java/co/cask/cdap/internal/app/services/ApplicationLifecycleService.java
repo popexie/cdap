@@ -691,7 +691,7 @@ public class ApplicationLifecycleService extends AbstractIdleService {
   private void ensureAccess(ApplicationId appId) throws Exception {
     Principal principal = authenticationContext.getPrincipal();
     Predicate<EntityId> filter = authorizationEnforcer.createFilter(principal);
-    if (!Principal.SYSTEM.equals(principal) && !filter.apply(appId)) {
+    if (!filter.apply(appId)) {
       throw new UnauthorizedException(principal, appId);
     }
   }

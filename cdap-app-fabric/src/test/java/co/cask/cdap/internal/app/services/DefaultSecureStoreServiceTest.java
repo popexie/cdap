@@ -19,12 +19,11 @@ package co.cask.cdap.internal.app.services;
 import co.cask.cdap.common.conf.CConfiguration;
 import co.cask.cdap.common.conf.Constants;
 import co.cask.cdap.common.conf.SConfiguration;
-import co.cask.cdap.common.namespace.NamespaceAdmin;
+import co.cask.cdap.common.namespace.NamespaceQueryAdmin;
+import co.cask.cdap.common.namespace.RemoteNamespaceQueryClient;
 import co.cask.cdap.common.utils.Tasks;
-import co.cask.cdap.data2.datafabric.dataset.service.DatasetService;
-import co.cask.cdap.data2.datafabric.dataset.service.executor.DatasetOpExecutor;
 import co.cask.cdap.gateway.handlers.meta.RemoteSystemOperationsService;
-import co.cask.cdap.internal.guice.AppFabricTestModule;
+import co.cask.cdap.internal.AppFabricTestHelper;
 import co.cask.cdap.internal.test.AppJarHelper;
 import co.cask.cdap.proto.Id;
 import co.cask.cdap.proto.id.EntityId;
@@ -35,17 +34,16 @@ import co.cask.cdap.proto.security.Principal;
 import co.cask.cdap.proto.security.Privilege;
 import co.cask.cdap.proto.security.SecureKeyCreateRequest;
 import co.cask.cdap.proto.security.SecureKeyListEntry;
-import co.cask.cdap.security.authorization.AuthorizationEnforcementService;
+import co.cask.cdap.security.auth.context.MasterAuthenticationContext;
 import co.cask.cdap.security.authorization.AuthorizerInstantiator;
 import co.cask.cdap.security.authorization.InMemoryAuthorizer;
 import co.cask.cdap.security.spi.authentication.SecurityRequestContext;
 import co.cask.cdap.security.spi.authorization.Authorizer;
 import co.cask.cdap.security.spi.authorization.UnauthorizedException;
-import co.cask.tephra.TransactionManager;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
-import com.google.inject.Guice;
+import com.google.inject.AbstractModule;
 import com.google.inject.Injector;
 import org.apache.twill.filesystem.LocalLocationFactory;
 import org.apache.twill.filesystem.Location;
@@ -72,7 +70,6 @@ public class DefaultSecureStoreServiceTest {
 
   private static SecureStoreService secureStoreService;
   private static Authorizer authorizer;
-  private static AuthorizationEnforcementService authorizationEnforcementService;
   private static AppFabricServer appFabricServer;
   private static RemoteSystemOperationsService remoteSystemOperationsService;
 
@@ -84,29 +81,25 @@ public class DefaultSecureStoreServiceTest {
     CConfiguration cConf = createCConf();
     SConfiguration sConf = SConfiguration.create();
     sConf.set(Constants.Security.Store.FILE_PASSWORD, "secret");
-    final Injector injector = Guice.createInjector(new AppFabricTestModule(createCConf(), sConf));
-    injector.getInstance(TransactionManager.class).startAndWait();
-    injector.getInstance(DatasetOpExecutor.class).startAndWait();
-    injector.getInstance(DatasetService.class).startAndWait();
+    final Injector injector = AppFabricTestHelper.getInjector(cConf, sConf, new AbstractModule() {
+      @Override
+      protected void configure() {
+        bind(NamespaceQueryAdmin.class).to(RemoteNamespaceQueryClient.class);
+      }
+    });
     appFabricServer = injector.getInstance(AppFabricServer.class);
     appFabricServer.startAndWait();
-    authorizationEnforcementService = injector.getInstance(AuthorizationEnforcementService.class);
-    authorizationEnforcementService.startAndWait();
     remoteSystemOperationsService = injector.getInstance(RemoteSystemOperationsService.class);
     remoteSystemOperationsService.startAndWait();
     secureStoreService = injector.getInstance(SecureStoreService.class);
     authorizer = injector.getInstance(AuthorizerInstantiator.class).get();
-    SecurityRequestContext.setUserId(ALICE.getName());
-
     secureStoreService = injector.getInstance(SecureStoreService.class);
-    authorizer.grant(NamespaceId.DEFAULT, ALICE, Collections.singleton(Action.READ));
     Tasks.waitFor(true, new Callable<Boolean>() {
       @Override
       public Boolean call() throws Exception {
-        return injector.getInstance(NamespaceAdmin.class).exists(Id.Namespace.DEFAULT);
+        return injector.getInstance(NamespaceQueryAdmin.class).exists(Id.Namespace.DEFAULT);
       }
     }, 5, TimeUnit.SECONDS);
-    authorizer.revoke(NamespaceId.DEFAULT, ALICE, Collections.singleton(Action.READ));
   }
 
   private static CConfiguration createCConf() throws Exception {
@@ -119,7 +112,7 @@ public class DefaultSecureStoreServiceTest {
     // we only want to test authorization, but we don't specify principal/keytab, so disable kerberos
     cConf.setBoolean(Constants.Security.KERBEROS_ENABLED, false);
     cConf.setBoolean(Constants.Security.Authorization.CACHE_ENABLED, false);
-    cConf.set(Constants.Security.Authorization.SUPERUSERS, "hulk");
+    cConf.set(Constants.Security.Authorization.SYSTEM_USER, new MasterAuthenticationContext().getPrincipal().getName());
     Location authorizerJar = AppJarHelper.createDeploymentJar(locationFactory, InMemoryAuthorizer.class);
     cConf.set(Constants.Security.Authorization.EXTENSION_JAR_PATH, authorizerJar.toURI().getPath());
 
@@ -189,7 +182,6 @@ public class DefaultSecureStoreServiceTest {
   public static void cleanup() {
     appFabricServer.stopAndWait();
     remoteSystemOperationsService.stopAndWait();
-    authorizationEnforcementService.stopAndWait();
   }
 
   private void grantAndAssertSuccess(EntityId entityId, Principal principal, Set<Action> actions) throws Exception {

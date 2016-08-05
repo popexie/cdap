@@ -26,6 +26,7 @@ import co.cask.cdap.proto.id.NamespaceId;
 import co.cask.cdap.proto.security.Action;
 import co.cask.cdap.proto.security.Principal;
 import co.cask.cdap.proto.security.Privilege;
+import co.cask.cdap.security.auth.context.AuthenticationTestContext;
 import co.cask.cdap.security.authorization.AuthorizerInstantiator;
 import co.cask.cdap.security.authorization.InMemoryAuthorizer;
 import co.cask.cdap.security.spi.authentication.SecurityRequestContext;
@@ -59,19 +60,22 @@ public class SystemArtifactsAuthorizationTest {
   private static ArtifactRepository artifactRepository;
   private static Authorizer authorizer;
   private static InstanceId instance;
+  private static String systemUser;
 
   @BeforeClass
   public static void setup() throws Exception {
     CConfiguration cConf = CConfiguration.create();
     cConf.set(Constants.CFG_LOCAL_DATA_DIR, TMP_FOLDER.newFolder().getAbsolutePath());
     cConf.setBoolean(Constants.Security.ENABLED, true);
-    cConf.setBoolean(Constants.Security.Authorization.ENABLED, true);
     cConf.setBoolean(Constants.Security.KERBEROS_ENABLED, false);
+    cConf.setBoolean(Constants.Security.Authorization.ENABLED, true);
+    cConf.setBoolean(Constants.Security.Authorization.CACHE_ENABLED, false);
     Location deploymentJar = AppJarHelper.createDeploymentJar(new LocalLocationFactory(TMP_FOLDER.newFolder()),
                                                               InMemoryAuthorizer.class);
     cConf.set(Constants.Security.Authorization.EXTENSION_JAR_PATH, deploymentJar.toURI().getPath());
-    cConf.set(Constants.Security.Authorization.SUPERUSERS, "hulk");
-    Injector injector =  AppFabricTestHelper.getInjector(cConf);
+    systemUser = new AuthenticationTestContext().getPrincipal().getName();
+    cConf.set(Constants.Security.Authorization.SYSTEM_USER, systemUser);
+    Injector injector = AppFabricTestHelper.getInjector(cConf);
     artifactRepository = injector.getInstance(ArtifactRepository.class);
     AuthorizerInstantiator instantiatorService = injector.getInstance(AuthorizerInstantiator.class);
     authorizer = instantiatorService.get();
@@ -80,8 +84,8 @@ public class SystemArtifactsAuthorizationTest {
 
   @Test
   public void testAuthorizationForSystemArtifacts() throws Exception {
-    // the system user must be able to add system artifacts
-    SecurityRequestContext.setUserId(Principal.SYSTEM.getName());
+    // the super user must be able to add system artifacts
+    SecurityRequestContext.setUserId(systemUser);
     artifactRepository.addSystemArtifacts();
     // alice should not be able to refresh system artifacts because she does not have write privileges on the
     // CDAP instance
@@ -94,11 +98,16 @@ public class SystemArtifactsAuthorizationTest {
       // expected
     }
     // grant alice write privileges on the CDAP instance
-    authorizer.grant(instance, ALICE, Collections.singleton(Action.WRITE));
-    Assert.assertEquals(Collections.singleton(new Privilege(instance, Action.WRITE)), authorizer.listPrivileges(ALICE));
+    authorizer.grant(NamespaceId.SYSTEM, ALICE, Collections.singleton(Action.WRITE));
+    Assert.assertEquals(
+      Collections.singleton(new Privilege(NamespaceId.SYSTEM, Action.WRITE)),
+      authorizer.listPrivileges(ALICE)
+    );
     // refreshing system artifacts should succeed now
     artifactRepository.addSystemArtifacts();
-    // deleting a system artifact should still fail because alice does not have admin privileges on the CDAP instance
+    // deleting a system artifact should still fail because alice does not have admin privileges on the artifact
+    // this is simulation - under normal circumstances this will succeed because alice added the artifacts, so she
+    // would have all privileges on the artifact
     ArtifactId systemArtifact = NamespaceId.SYSTEM.artifact("system-artifact", "1.0");
     try {
       artifactRepository.deleteArtifact(systemArtifact.toId());
@@ -107,12 +116,7 @@ public class SystemArtifactsAuthorizationTest {
     } catch (UnauthorizedException expected) {
       // expected
     }
-    // grant alice admin privileges on the CDAP instance
-    authorizer.grant(instance, ALICE, Collections.singleton(Action.ADMIN));
-    Assert.assertEquals(
-      ImmutableSet.of(new Privilege(instance, Action.WRITE), new Privilege(instance, Action.ADMIN)),
-      authorizer.listPrivileges(ALICE)
-    );
+    authorizer.grant(systemArtifact, ALICE, Collections.singleton(Action.ADMIN));
     // deleting system artifact should succeed now
     artifactRepository.deleteArtifact(systemArtifact.toId());
   }
@@ -120,6 +124,7 @@ public class SystemArtifactsAuthorizationTest {
   @AfterClass
   public static void cleanup() throws Exception {
     authorizer.revoke(instance);
+    authorizer.revoke(NamespaceId.SYSTEM);
     Assert.assertEquals(ImmutableSet.<Privilege>of(), authorizer.listPrivileges(ALICE));
     SecurityRequestContext.setUserId(OLD_USER_ID);
   }
