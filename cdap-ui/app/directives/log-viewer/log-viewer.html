@@ -157,7 +157,7 @@
           </td>
         </tr>
 
-        <tr class="message-holder" ng-if="LogViewer.applicationIsRunning || (!LogViewer.loading && LogViewer.displayData.length === 0)">
+        <tr class="message-holder">
           <td colspan="4">
             <div class="well well-sm text-center"
                  ng-if="!LogViewer.loading && LogViewer.displayData.length === 0">
@@ -169,7 +169,7 @@
                  ng-if="LogViewer.loading">
               <h4>Loading ...</h4>
             </div>
-            <div class="well well-sm spinner-container text-center" ng-if="LogViewer.applicationIsRunning">
+            <div class="well well-sm spinner-container text-center" ng-if="LogViewer.applicationIsRunning && !LogViewer.loading">
               <h4 >
                 <i class="fa fa-spinner fa-spin"></i>
               </h4>

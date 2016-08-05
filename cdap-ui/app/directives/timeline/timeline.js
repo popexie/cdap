@@ -73,19 +73,6 @@ function link (scope, element) {
     pinX = 0;
     sliderX = 0;
     timelineStack = {};
-    sliderHandle = undefined;
-    pinHandle = undefined;
-    sliderBrush = undefined;
-    scrollPinBrush = undefined;
-    scrollNeedle = undefined;
-    xScale = undefined;
-    slide = undefined;
-    slider = undefined;
-    timescaleSvg = undefined;
-    scrollPinSvg = undefined;
-    xAxis = undefined;
-    sliderBar = undefined;
-    tooltipDiv = undefined;
     timelineData = scope.metadata;
 
     scope.plot();
@@ -254,12 +241,12 @@ function link (scope, element) {
         let overflowOffset = xScale(scope.pinScrollingPosition) + 250 > maxRange ? 250 : 0;
 
         tooltipDiv.transition()
-                    .duration(200)
-                    .style('opacity', 0.9)
-                    .attr('class', 'timeline-tooltip');
+          .duration(200)
+          .style('opacity', 0.9)
+          .attr('class', 'timeline-tooltip');
         tooltipDiv.html(scope.pinScrollingPosition)
-                  .style('left', (d3.event.pageX - overflowOffset) + 'px')
-                  .style('top', (d3.event.pageY - 28) + 'px');
+          .style('left', (d3.event.pageX - overflowOffset) + 'px')
+          .style('top', (d3.event.pageY - 28) + 'px');
       })
       .on('mouseout', function() {
         d3.selectAll('.timeline-tooltip').remove();
@@ -279,10 +266,10 @@ function link (scope, element) {
     if(xPositionVal < 0 || xPositionVal > maxRange){
       return;
     }
-    if(pinHandle !== undefined){
+    if(typeof pinHandle !== 'undefined'){
      pinHandle.attr('x', xPositionVal - pinOffset + 1);
      scrollNeedle.attr('x1', xPositionVal + 8)
-                 .attr('x2', xPositionVal + 8);
+      .attr('x2', xPositionVal + 8);
     }
   };
 
@@ -325,7 +312,7 @@ function link (scope, element) {
           let xVal = Math.floor(xScale(currentItem.time));
           let numEvents = currentItem.value;
 
-          if(timelineStack[xVal] === undefined) {
+          if(typeof timelineStack[xVal] === 'undefined') {
             timelineStack[xVal] = 0;
           }
 
