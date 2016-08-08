@@ -71,7 +71,7 @@ function TimelineController ($scope, LogViewerStore, LOGVIEWERSTORE_ACTIONS, myL
 
   LogViewerStore.subscribe(() => {
     this.pinScrollPosition = LogViewerStore.getState().scrollPosition;
-    if($scope.updatePin !== undefined){
+    if(typeof $scope.updatePin !== 'undefined'){
       $scope.pinScrollingPosition = this.pinScrollPosition;
       $scope.updatePin();
     }

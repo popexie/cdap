@@ -95,7 +95,7 @@ function LogViewerController ($scope, LogViewerStore, myLogsApi, LOGVIEWERSTORE_
     }
     else {
       //This is the top of the table
-      if(isInview && (viewMap[index-1] === false || viewMap[index-1] === undefined)){
+      if(isInview && (viewMap[index-1] === false || typeof viewMap[index-1] === 'undefined')){
         viewMap = {};
         newTime = this.displayData[index].log.timestamp;
         this.updateScrollPositionInStore(newTime);
