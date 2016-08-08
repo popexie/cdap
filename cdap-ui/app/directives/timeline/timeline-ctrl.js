@@ -89,8 +89,13 @@ function TimelineController ($scope, LogViewerStore, LOGVIEWERSTORE_ACTIONS, myL
     runId : this.runId,
   }).$promise.then(
     (res) => {
+
+      if(res.start === res.end){
+        res.end++;
+      }
+
       apiSettings.metric.startTime = res.start;
-      apiSettings.metric.endTime = 'now';
+      apiSettings.metric.endTime = res.end;
       pollForMetadata();
     },
     (err) => {
