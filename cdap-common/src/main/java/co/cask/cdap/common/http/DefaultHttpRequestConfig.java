@@ -27,8 +27,8 @@ import java.net.HttpURLConnection;
 public class DefaultHttpRequestConfig extends HttpRequestConfig {
 
   public DefaultHttpRequestConfig() {
-    super(getTimeoutProperty(Constants.HTTP_CLIENT_CONNECTION_TIMEOUT_MS),
-         getTimeoutProperty(Constants.HTTP_CLIENT_READ_TIMEOUT_MS));
+    super(Integer.getInteger(Constants.HTTP_CLIENT_CONNECTION_TIMEOUT_MS),
+         Integer.getInteger(Constants.HTTP_CLIENT_READ_TIMEOUT_MS));
   }
 
   /**
@@ -36,8 +36,8 @@ public class DefaultHttpRequestConfig extends HttpRequestConfig {
    *                      verified.
    */
   public DefaultHttpRequestConfig(boolean verifySSLCert) {
-    super(getTimeoutProperty(Constants.HTTP_CLIENT_CONNECTION_TIMEOUT_MS),
-          getTimeoutProperty(Constants.HTTP_CLIENT_READ_TIMEOUT_MS), verifySSLCert);
+    super(Integer.getInteger(Constants.HTTP_CLIENT_CONNECTION_TIMEOUT_MS),
+          Integer.getInteger(Constants.HTTP_CLIENT_READ_TIMEOUT_MS), verifySSLCert);
   }
 
   /**
@@ -47,11 +47,7 @@ public class DefaultHttpRequestConfig extends HttpRequestConfig {
    *                                  {@link HttpURLConnection#setFixedLengthStreamingMode(int)}.
    */
   public DefaultHttpRequestConfig(boolean verifySSLCert, int fixedLengthStreamingThreshold) {
-    super(getTimeoutProperty(Constants.HTTP_CLIENT_CONNECTION_TIMEOUT_MS),
-          getTimeoutProperty(Constants.HTTP_CLIENT_READ_TIMEOUT_MS), verifySSLCert, fixedLengthStreamingThreshold);
-  }
-
-  private static int getTimeoutProperty(String propertyName) {
-    return Integer.parseInt(System.getProperty(propertyName));
+    super(Integer.getInteger(Constants.HTTP_CLIENT_CONNECTION_TIMEOUT_MS),
+          Integer.getInteger(Constants.HTTP_CLIENT_READ_TIMEOUT_MS), verifySSLCert, fixedLengthStreamingThreshold);
   }
 }
