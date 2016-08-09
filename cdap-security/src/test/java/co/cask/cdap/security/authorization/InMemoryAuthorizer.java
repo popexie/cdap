@@ -33,24 +33,34 @@ import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Sets;
 import com.google.common.collect.Table;
 
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
-import javax.annotation.concurrent.NotThreadSafe;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
  * In-memory implementation of {@link Authorizer}.
  */
-@NotThreadSafe
 public class InMemoryAuthorizer extends AbstractAuthorizer {
 
   private final Table<EntityId, Principal, Set<Action>> table = HashBasedTable.create();
-  private final Map<Role, Set<Principal>> roleToPrincipals = new HashMap<>();
+  private final Map<Role, Set<Principal>> roleToPrincipals = new ConcurrentHashMap<>();
   private final Set<Principal> superUsers = new HashSet<>();
   // Bypass enforcement for tests that want to simulate every user as a super user
   private final Principal allSuperUsers = new Principal("*", Principal.PrincipalType.USER);
+
+  private final Lock readLock;
+  private final Lock writeLock;
+
+  public InMemoryAuthorizer() {
+    ReadWriteLock readWriteLock = new ReentrantReadWriteLock();
+    this.readLock = readWriteLock.readLock();
+    this.writeLock = readWriteLock.writeLock();
+  }
 
   @Override
   public void initialize(AuthorizationContext context) throws Exception {
@@ -93,18 +103,35 @@ public class InMemoryAuthorizer extends AbstractAuthorizer {
 
   @Override
   public void grant(EntityId entity, Principal principal, Set<Action> actions) {
-    getActions(entity, principal).addAll(actions);
+    Set<Action> existing = getActions(entity, principal);
+    writeLock.lock();
+    try {
+      existing.addAll(actions);
+    } finally {
+      writeLock.unlock();
+    }
   }
 
   @Override
   public void revoke(EntityId entity, Principal principal, Set<Action> actions) {
-    getActions(entity, principal).removeAll(actions);
+    Set<Action> existing = getActions(entity, principal);
+    writeLock.lock();
+    try {
+      existing.removeAll(actions);
+    } finally {
+      writeLock.unlock();
+    }
   }
 
   @Override
   public void revoke(EntityId entity) {
-    for (Principal principal : table.row(entity).keySet()) {
-      getActions(entity, principal).clear();
+    writeLock.lock();
+    try {
+      for (Principal principal : table.row(entity).keySet()) {
+        getActions(entity, principal).clear();
+      }
+    } finally {
+      writeLock.unlock();
     }
   }
 
@@ -172,20 +199,38 @@ public class InMemoryAuthorizer extends AbstractAuthorizer {
   }
 
   private Set<Privilege> getPrivileges(Principal principal) {
-    Set<Privilege> privileges = new HashSet<>();
-    Set<Map.Entry<EntityId, Set<Action>>> entries = table.column(principal).entrySet();
-    for (Map.Entry<EntityId, Set<Action>> entry : entries) {
-      for (Action action : entry.getValue()) {
-        privileges.add(new Privilege(entry.getKey(), action));
+    readLock.lock();
+    try {
+      Set<Privilege> privileges = new HashSet<>();
+      Set<Map.Entry<EntityId, Set<Action>>> entries = table.column(principal).entrySet();
+      for (Map.Entry<EntityId, Set<Action>> entry : entries) {
+        for (Action action : entry.getValue()) {
+          privileges.add(new Privilege(entry.getKey(), action));
+        }
       }
+      return privileges;
+    } finally {
+      readLock.unlock();
     }
-    return privileges;
   }
 
   private Set<Action> getActions(EntityId entity, Principal principal) {
-    if (!table.contains(entity, principal)) {
-      table.put(entity, principal, new HashSet<Action>());
+    Set<Action> actions;
+    readLock.lock();
+    try {
+      actions = table.get(entity, principal);
+    } finally {
+      readLock.unlock();
     }
-    return table.get(entity, principal);
+    if (actions == null) {
+      actions = new HashSet<>();
+      writeLock.lock();
+      try {
+        table.put(entity, principal, actions);
+      } finally {
+        writeLock.unlock();
+      }
+    }
+    return actions;
   }
 }
