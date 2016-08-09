@@ -46,7 +46,7 @@ public class NamespaceStoreModule extends RuntimeModule {
     return new PrivateModule() {
       @Override
       protected void configure() {
-        bind(NamespaceStore.class).to(DefaultNamespaceStore.class);
+        bind(NamespaceStore.class).to(DefaultNamespaceStore.class).in(Scopes.SINGLETON);
         expose(NamespaceStore.class);
       }
     };
@@ -57,7 +57,7 @@ public class NamespaceStoreModule extends RuntimeModule {
     return new PrivateModule() {
       @Override
       protected void configure() {
-        bind(NamespaceStore.class).to(DefaultNamespaceStore.class);
+        bind(NamespaceStore.class).to(DefaultNamespaceStore.class).in(Scopes.SINGLETON);
         expose(NamespaceStore.class);
       }
     };

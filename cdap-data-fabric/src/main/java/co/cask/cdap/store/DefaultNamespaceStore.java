@@ -95,7 +95,6 @@ public class DefaultNamespaceStore implements NamespaceStore {
       }
     };
     this.namespaceMetaCache = CacheBuilder.newBuilder().build(new CacheLoader<NamespaceId, NamespaceMeta>() {
-      @SuppressWarnings("NullableProblems")
       @Override
       public NamespaceMeta load(NamespaceId namespaceId) throws Exception {
         return fetchNamespaceMeta(namespaceId);
