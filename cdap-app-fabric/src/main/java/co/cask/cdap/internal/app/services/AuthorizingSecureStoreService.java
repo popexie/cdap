@@ -47,15 +47,16 @@ import java.util.List;
 /**
  * Default implementation of the service that manages access to the Secure Store,
  */
-public class DefaultSecureStoreService implements SecureStoreService {
+public class AuthorizingSecureStoreService implements SecureStoreService {
   private final Authorizer authorizer;
   private final AuthenticationContext authenticationContext;
   private final SecureStore secureStore;
   private final SecureStoreManager secureStoreManager;
 
   @Inject
-  DefaultSecureStoreService(AuthorizerInstantiator authorizerInstantiator, AuthenticationContext authenticationContext,
-                            SecureStore secureStore, SecureStoreManager secureStoreManager) {
+  AuthorizingSecureStoreService(AuthorizerInstantiator authorizerInstantiator,
+                                AuthenticationContext authenticationContext,
+                                SecureStore secureStore, SecureStoreManager secureStoreManager) {
     this.authorizer = authorizerInstantiator.get();
     this.authenticationContext = authenticationContext;
     this.secureStore = secureStore;
