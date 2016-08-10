@@ -87,6 +87,7 @@ import org.junit.runners.model.Statement;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.EnumSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
@@ -203,6 +204,10 @@ public class AuthorizationTest extends TestBase {
     createAuthNamespace();
     Authorizer authorizer = getAuthorizer();
     ApplicationManager appManager = deployApplication(AUTH_NAMESPACE.toId(), StreamAuthApp.class);
+    // After deploy, change Alice from ALL to ADMIN on the namespace
+    authorizer.revoke(AUTH_NAMESPACE, ALICE, EnumSet.of(Action.ALL));
+    authorizer.grant(AUTH_NAMESPACE, ALICE, EnumSet.of(Action.ADMIN));
+
     final FlowManager flowManager = appManager.getFlowManager(StreamAuthApp.FLOW);
     StreamId streamId = AUTH_NAMESPACE.stream(StreamAuthApp.STREAM);
     StreamManager streamManager = getStreamManager(AUTH_NAMESPACE.toId(), StreamAuthApp.STREAM);
@@ -268,6 +273,10 @@ public class AuthorizationTest extends TestBase {
     createAuthNamespace();
     Authorizer authorizer = getAuthorizer();
     ApplicationManager appManager = deployApplication(AUTH_NAMESPACE.toId(), StreamAuthApp.class);
+    // After deploy, change Alice from ALL to ADMIN on the namespace
+    authorizer.revoke(AUTH_NAMESPACE, ALICE, EnumSet.of(Action.ALL));
+    authorizer.grant(AUTH_NAMESPACE, ALICE, EnumSet.of(Action.ADMIN));
+
     WorkerManager workerManager = appManager.getWorkerManager(StreamAuthApp.WORKER);
     workerManager.start();
     workerManager.waitForFinish(5, TimeUnit.SECONDS);
@@ -306,6 +315,10 @@ public class AuthorizationTest extends TestBase {
     Authorizer authorizer = getAuthorizer();
     StreamId streamId = AUTH_NAMESPACE.stream(StreamAuthApp.STREAM);
     ApplicationManager appManager = deployApplication(AUTH_NAMESPACE.toId(), StreamAuthApp.class);
+    // After deploy, change Alice from ALL to ADMIN on the namespace
+    authorizer.revoke(AUTH_NAMESPACE, ALICE, EnumSet.of(Action.ALL));
+    authorizer.grant(AUTH_NAMESPACE, ALICE, EnumSet.of(Action.ADMIN));
+
     StreamManager streamManager = getStreamManager(AUTH_NAMESPACE.toId(), StreamAuthApp.STREAM);
     streamManager.send("Hello");
     final SparkManager sparkManager = appManager.getSparkManager(StreamAuthApp.SPARK);
@@ -381,6 +394,10 @@ public class AuthorizationTest extends TestBase {
     createAuthNamespace();
     Authorizer authorizer = getAuthorizer();
     ApplicationManager appManager = deployApplication(AUTH_NAMESPACE.toId(), StreamAuthApp.class);
+    // After deploy, change Alice from ALL to ADMIN on the namespace
+    authorizer.revoke(AUTH_NAMESPACE, ALICE, EnumSet.of(Action.ALL));
+    authorizer.grant(AUTH_NAMESPACE, ALICE, EnumSet.of(Action.ADMIN));
+
     StreamManager streamManager = getStreamManager(AUTH_NAMESPACE.toId(), StreamAuthApp.STREAM);
     streamManager.send("Hello");
     final MapReduceManager mrManager = appManager.getMapReduceManager(StreamAuthApp.MAPREDUCE);
@@ -406,7 +423,7 @@ public class AuthorizationTest extends TestBase {
     }, 5, TimeUnit.SECONDS);
 
     ProgramId mrId = AUTH_NAMESPACE.app(StreamAuthApp.APP).mr(StreamAuthApp.MAPREDUCE);
-    authorizer.grant(mrId.getNamespaceId(), BOB, ImmutableSet.of(Action.ALL));
+    authorizer.grant(mrId.getNamespaceId(), BOB, ImmutableSet.of(Action.ADMIN));
     ArtifactSummary artifactSummary = appManager.getInfo().getArtifact();
 
     ArtifactId artifactId = AUTH_NAMESPACE.artifact(artifactSummary.getName(), artifactSummary.getVersion());
@@ -632,7 +649,12 @@ public class AuthorizationTest extends TestBase {
       ),
       authorizer.listPrivileges(ALICE)
     );
-    // deleting all apps should fail because alice does not have admin privileges on the Workflow app
+
+    // Revoke Alice all access, but granting her READ, WRITE and EXECUTE
+    authorizer.revoke(AUTH_NAMESPACE, ALICE, EnumSet.allOf(Action.class));
+    grantAndAssertSuccess(AUTH_NAMESPACE, ALICE, EnumSet.of(Action.READ, Action.WRITE, Action.EXECUTE));
+
+    // deleting all apps should fail because alice does not have admin privileges on the Workflow app and the namespace
     try {
       deleteAllApplications(AUTH_NAMESPACE);
       Assert.fail("Deleting all applications in the namespace should have failed because alice does not have ADMIN " +
@@ -647,7 +669,9 @@ public class AuthorizationTest extends TestBase {
     Assert.assertEquals(
       ImmutableSet.of(
         new Privilege(instance, Action.ADMIN),
-        new Privilege(AUTH_NAMESPACE, Action.ALL),
+        new Privilege(AUTH_NAMESPACE, Action.READ),
+        new Privilege(AUTH_NAMESPACE, Action.WRITE),
+        new Privilege(AUTH_NAMESPACE, Action.EXECUTE),
         new Privilege(dummyArtifact, Action.ALL),
         new Privilege(streamId, Action.ALL),
         new Privilege(updatedDummyArtifact, Action.ALL),
@@ -982,6 +1006,8 @@ public class AuthorizationTest extends TestBase {
   @After
   public void cleanupTest() throws Exception {
     Authorizer authorizer = getAuthorizer();
+
+    grantAndAssertSuccess(AUTH_NAMESPACE, SecurityRequestContext.toPrincipal(), EnumSet.of(Action.ALL));
     // clean up. remove the namespace. all privileges on the namespace should be revoked
     getNamespaceAdmin().delete(AUTH_NAMESPACE.toId());
     Assert.assertEquals(ImmutableSet.of(new Privilege(instance, Action.ADMIN)), authorizer.listPrivileges(ALICE));
