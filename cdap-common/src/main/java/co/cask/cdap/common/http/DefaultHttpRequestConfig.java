@@ -31,7 +31,6 @@ import java.net.HttpURLConnection;
 public class DefaultHttpRequestConfig extends HttpRequestConfig {
 
   private static final int DEFAULT_TIMEOUT = 60000;
-
   private static final Logger LOG = LoggerFactory.getLogger(DefaultHttpRequestConfig.class);
 
   public DefaultHttpRequestConfig() {
