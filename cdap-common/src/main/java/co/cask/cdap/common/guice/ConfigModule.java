@@ -59,9 +59,9 @@ public final class ConfigModule extends AbstractModule {
     CConfigurationUtil.copyTxProperties(cConf, hConf);
 
     // Set system properties for all HTTP requests
-    System.setProperty("cdap." + Constants.HTTP_CLIENT_CONNECTION_TIMEOUT_MS,
+    System.setProperty(SYSTEM_PROPERTY_PREFIX + Constants.HTTP_CLIENT_CONNECTION_TIMEOUT_MS,
                        cConf.get(Constants.HTTP_CLIENT_CONNECTION_TIMEOUT_MS));
-    System.setProperty("cdap." + Constants.HTTP_CLIENT_READ_TIMEOUT_MS,
+    System.setProperty(SYSTEM_PROPERTY_PREFIX + Constants.HTTP_CLIENT_READ_TIMEOUT_MS,
                        cConf.get(Constants.HTTP_CLIENT_READ_TIMEOUT_MS));
   }
 

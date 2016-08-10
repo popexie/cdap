@@ -30,7 +30,9 @@ import java.net.HttpURLConnection;
  */
 public class DefaultHttpRequestConfig extends HttpRequestConfig {
 
-  private static Logger LOG = LoggerFactory.getLogger(DefaultHttpRequestConfig.class);
+  private static final int DEFAULT_TIMEOUT = 60000;
+
+  private static final Logger LOG = LoggerFactory.getLogger(DefaultHttpRequestConfig.class);
 
   public DefaultHttpRequestConfig() {
     super(getTimeoutFromSystemProperties(Constants.HTTP_CLIENT_CONNECTION_TIMEOUT_MS),
@@ -61,8 +63,8 @@ public class DefaultHttpRequestConfig extends HttpRequestConfig {
   private static int getTimeoutFromSystemProperties(String propertyName) {
     Integer value = Integer.getInteger(ConfigModule.SYSTEM_PROPERTY_PREFIX + propertyName);
     if (value == null) {
-      LOG.warn("Timeout property {} was not found in system properties.", propertyName);
-      return 60000;
+      LOG.debug("Timeout property {} was not found in system properties.", propertyName);
+      return DEFAULT_TIMEOUT;
     }
     return value;
   }
