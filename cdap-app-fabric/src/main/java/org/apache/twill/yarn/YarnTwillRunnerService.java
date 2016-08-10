@@ -92,6 +92,7 @@ import java.io.BufferedOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.security.PrivilegedExceptionAction;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
@@ -555,20 +556,19 @@ public final class YarnTwillRunnerService implements TwillRunnerService {
 
   private void updateSecureStores(Table<String, RunId, SecureStore> secureStores) {
     for (Table.Cell<String, RunId, SecureStore> cell : secureStores.cellSet()) {
-      Object store = cell.getValue().getStore();
-      if (!(store instanceof Credentials)) {
-        LOG.warn("Only Hadoop Credentials is supported. Ignore update for {}.", cell);
+      SecureStore secureStore = cell.getValue();
+      if (!(secureStore instanceof YarnSecureStore)) {
+        LOG.warn("Only Yarn SecureStore is supported. Ignore update for {}.", cell);
         continue;
       }
-
-      Credentials credentials = (Credentials) store;
-      if (credentials.getAllTokens().isEmpty()) {
+      YarnSecureStore yarnSecureStore = (YarnSecureStore) secureStore;
+      if (yarnSecureStore.getStore().getAllTokens().isEmpty()) {
         // Nothing to update.
         continue;
       }
 
       try {
-        updateCredentials(cell.getRowKey(), cell.getColumnKey(), credentials);
+        updateCredentials(cell.getRowKey(), cell.getColumnKey(), yarnSecureStore);
         synchronized (YarnTwillRunnerService.this) {
           // Notify the application for secure store updates if it is still running.
           YarnTwillController controller = controllers.get(cell.getRowKey(), cell.getColumnKey());
@@ -582,9 +582,23 @@ public final class YarnTwillRunnerService implements TwillRunnerService {
     }
   }
 
-  private void updateCredentials(String application, RunId runId, Credentials updates) throws IOException {
-    Location credentialsLocation = locationFactory.create(String.format("/%s/%s/%s", application, runId.getId(),
-                                                                        Constants.Files.CREDENTIALS));
+  private void updateCredentials(final String application, final RunId runId,
+                                 YarnSecureStore yarnSecureStore) throws IOException {
+    Location credentialsLocation;
+    try {
+      credentialsLocation = yarnSecureStore.getUgi().doAs(new PrivilegedExceptionAction<Location>() {
+        @Override
+        public Location run() throws Exception {
+          return locationFactory.create(String.format("/%s/%s/%s", application, runId.getId(),
+                                                      Constants.Files.CREDENTIALS));
+        }
+      });
+    } catch (Exception e) {
+      // the only checked exception thrown in in the above Callable is IOException
+      Throwables.propagateIfInstanceOf(e, IOException.class);
+      throw Throwables.propagate(e);
+    }
+
     // Try to read the old credentials.
     Credentials credentials = new Credentials();
     if (credentialsLocation.exists()) {
@@ -594,7 +608,7 @@ public final class YarnTwillRunnerService implements TwillRunnerService {
     }
 
     // Overwrite with the updates.
-    credentials.addAll(updates);
+    credentials.addAll(yarnSecureStore.getStore());
 
     // Overwrite the credentials.
     Location tmpLocation = credentialsLocation.getTempFile(Constants.Files.CREDENTIALS);

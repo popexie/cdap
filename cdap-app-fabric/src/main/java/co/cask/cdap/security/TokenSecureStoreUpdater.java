@@ -264,6 +264,10 @@ public final class TokenSecureStoreUpdater implements SecureStoreUpdater {
   public SecureStore doUpdate() {
     Credentials credentials = refreshCredentials();
     LOG.info("Updated credentials {}", credentials.getAllTokens());
-    return YarnSecureStore.create(credentials);
+    try {
+      return YarnSecureStore.create(credentials, UserGroupInformation.getCurrentUser());
+    } catch (IOException e) {
+      throw Throwables.propagate(e);
+    }
   }
 }

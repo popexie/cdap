@@ -18,6 +18,7 @@
 package org.apache.twill.yarn;
 
 import org.apache.hadoop.security.Credentials;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.twill.api.SecureStore;
 
 /**
@@ -26,17 +27,23 @@ import org.apache.twill.api.SecureStore;
 public final class YarnSecureStore implements SecureStore {
 
   private final Credentials credentials;
+  private final UserGroupInformation ugi;
 
-  public static SecureStore create(Credentials credentials) {
-    return new YarnSecureStore(credentials);
+  public static SecureStore create(Credentials credentials, UserGroupInformation userGroupInformation) {
+    return new YarnSecureStore(credentials, userGroupInformation);
   }
 
-  private YarnSecureStore(Credentials credentials) {
+  private YarnSecureStore(Credentials credentials, UserGroupInformation ugi) {
     this.credentials = credentials;
+    this.ugi = ugi;
   }
 
   @Override
   public Credentials getStore() {
     return credentials;
+  }
+
+  public UserGroupInformation getUgi() {
+    return ugi;
   }
 }
