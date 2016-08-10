@@ -16,7 +16,9 @@
 
 package co.cask.cdap.common.http;
 
+import co.cask.cdap.common.NotFoundException;
 import co.cask.cdap.common.conf.Constants;
+import co.cask.cdap.common.guice.ConfigModule;
 import co.cask.common.http.HttpRequestConfig;
 
 import java.net.HttpURLConnection;
@@ -26,18 +28,18 @@ import java.net.HttpURLConnection;
  */
 public class DefaultHttpRequestConfig extends HttpRequestConfig {
 
-  public DefaultHttpRequestConfig() {
-    super(Integer.getInteger(Constants.HTTP_CLIENT_CONNECTION_TIMEOUT_MS),
-         Integer.getInteger(Constants.HTTP_CLIENT_READ_TIMEOUT_MS));
+  public DefaultHttpRequestConfig() throws NotFoundException {
+    super(getTimeoutFromSystemProperties(Constants.HTTP_CLIENT_CONNECTION_TIMEOUT_MS),
+          getTimeoutFromSystemProperties(Constants.HTTP_CLIENT_READ_TIMEOUT_MS));
   }
 
   /**
    * @param verifySSLCert false, to disable certificate verifying in SSL connections. By default SSL certificate is
    *                      verified.
    */
-  public DefaultHttpRequestConfig(boolean verifySSLCert) {
-    super(Integer.getInteger(Constants.HTTP_CLIENT_CONNECTION_TIMEOUT_MS),
-          Integer.getInteger(Constants.HTTP_CLIENT_READ_TIMEOUT_MS), verifySSLCert);
+  public DefaultHttpRequestConfig(boolean verifySSLCert) throws NotFoundException {
+    super(getTimeoutFromSystemProperties(Constants.HTTP_CLIENT_CONNECTION_TIMEOUT_MS),
+          getTimeoutFromSystemProperties(Constants.HTTP_CLIENT_READ_TIMEOUT_MS), verifySSLCert);
   }
 
   /**
@@ -46,8 +48,18 @@ public class DefaultHttpRequestConfig extends HttpRequestConfig {
    * @param fixedLengthStreamingThreshold number of bytes in the request body to use fix length request mode. See
    *                                  {@link HttpURLConnection#setFixedLengthStreamingMode(int)}.
    */
-  public DefaultHttpRequestConfig(boolean verifySSLCert, int fixedLengthStreamingThreshold) {
-    super(Integer.getInteger(Constants.HTTP_CLIENT_CONNECTION_TIMEOUT_MS),
-          Integer.getInteger(Constants.HTTP_CLIENT_READ_TIMEOUT_MS), verifySSLCert, fixedLengthStreamingThreshold);
+  public DefaultHttpRequestConfig(boolean verifySSLCert, int fixedLengthStreamingThreshold) throws NotFoundException {
+    super(getTimeoutFromSystemProperties(Constants.HTTP_CLIENT_CONNECTION_TIMEOUT_MS),
+          getTimeoutFromSystemProperties(Constants.HTTP_CLIENT_READ_TIMEOUT_MS),
+          verifySSLCert, fixedLengthStreamingThreshold);
+  }
+
+  private static int getTimeoutFromSystemProperties(String propertyName) throws NotFoundException {
+    Integer value = Integer.getInteger(ConfigModule.SYSTEM_PROPERTY_PREFIX + propertyName);
+    if (value == null) {
+      throw new NotFoundException(String.format("Timeout property %s was not found in system properties.",
+                                                propertyName));
+    }
+    return value;
   }
 }

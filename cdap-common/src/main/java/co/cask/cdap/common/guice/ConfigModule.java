@@ -28,6 +28,8 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
  */
 public final class ConfigModule extends AbstractModule {
 
+  public static final String SYSTEM_PROPERTY_PREFIX = "cdap.";
+
   private final CConfiguration cConf;
   private final Configuration hConf;
   private final SConfiguration sConf;
